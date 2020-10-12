@@ -1,6 +1,5 @@
 import sys
 import os
-import shutil
 
 dependencies = {}  # зависимости файлов
 actions = {}  # действия с файлами
@@ -18,19 +17,22 @@ def parse_makefile():
         if separator_pos != -1:
             curr_main_file = (line[0:separator_pos])  # файл, зависимости которого рассматриваются в цикле
             curr_actions = []
-            curr_dependencies = []
-            for dependency in line[separator_pos:-1].split(" "):  # не включать /n
-                curr_dependencies.append(dependency)
-            curr_dependencies.pop(0)
-            dependencies[curr_main_file] = curr_dependencies
+            if curr_main_file not in phony_func_names:
+                curr_dependencies = []
+                for dependency in line[separator_pos:-1].split(" "):  # не включать /n
+                    curr_dependencies.append(dependency)
+                curr_dependencies.pop(0)
+                dependencies[curr_main_file] = curr_dependencies
         if command_pos != -1:
             curr_actions.append(line[command_pos:])
         if phony_pos != -1:
             for phony_func_name in line[line.find("=") + 1:-1].strip().split():
                 phony_func_names.append(phony_func_name)
-            print(phony_func_names)
+            # print(phony_func_names)
         else:
             actions[curr_main_file] = curr_actions
+
+    # print(actions["clean"])
 
 
 # функция проверки на цикличность графа
@@ -120,16 +122,8 @@ def menu():
         else:
             topological_sort(dependencies, command[2], files_order)
             make_actions(files_order)
-    elif command[1] == "clean" and command[2] == "all":
-        shutil.rmtree(os.getcwd() + '\\files')
-    elif command[1] == "clean" and command[2] is not None:
-        try:
-            os.remove(os.getcwd() + '\\files\\' + command[2])
-        except FileNotFoundError:
-            print("No such file: ", command[2])
     elif command[1] in phony_func_names:
-        # TODO
-        pass
+        make_actions([command[1]])
     else:
         print("Unknown command")
 
