@@ -1,11 +1,12 @@
 import sys
 import os
 import shutil
-import subprocess
 
 dependencies = {}  # зависимости файлов
-actions = {}
+actions = {}  # действия с файлами
+functions = {}
 hash_table = {}
+phony_func_names = []
 
 
 def parse_makefile():
@@ -13,16 +14,21 @@ def parse_makefile():
     for line in makefile:
         separator_pos = line.find(':')
         command_pos = line.find('@')
+        phony_pos = line.find(".PHONY")
         if separator_pos != -1:
             curr_main_file = (line[0:separator_pos])  # файл, зависимости которого рассматриваются в цикле
-            curr_dependencies = []
             curr_actions = []
-            for dependency in line[separator_pos:-1].split(" "):
+            curr_dependencies = []
+            for dependency in line[separator_pos:-1].split(" "):  # не включать /n
                 curr_dependencies.append(dependency)
             curr_dependencies.pop(0)
             dependencies[curr_main_file] = curr_dependencies
         if command_pos != -1:
             curr_actions.append(line[command_pos:])
+        if phony_pos != -1:
+            for phony_func_name in line[line.find("=") + 1:-1].strip().split():
+                phony_func_names.append(phony_func_name)
+            print(phony_func_names)
         else:
             actions[curr_main_file] = curr_actions
 
@@ -76,7 +82,7 @@ def hash_func(element):
     return hash_str
 
 
-# реализуем  хеш таблицу через словарь для контроля версий, ключи к которому будут генерироваться с помощью hash_func()
+# реализуем  хеш-таблицу через словарь для контроля версий, ключи к которому будут генерироваться с помощью hash_func()
 def in_hash_table(element):
     if hash_func(element) in hash_table.keys():
         return True
@@ -121,6 +127,9 @@ def menu():
             os.remove(os.getcwd() + '\\files\\' + command[2])
         except FileNotFoundError:
             print("No such file: ", command[2])
+    elif command[1] in phony_func_names:
+        # TODO
+        pass
     else:
         print("Unknown command")
 
