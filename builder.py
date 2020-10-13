@@ -2,37 +2,9 @@ import sys
 import os
 
 dependencies = {}  # зависимости файлов
-actions = {}  # действия с файлами
-functions = {}
+actions = {}  # действия (с файлами и для ложных целей)
 hash_table = {}
 phony_func_names = []
-
-
-def parse_makefile():
-    makefile = open('Makefile', 'r')
-    for line in makefile:
-        separator_pos = line.find(':')
-        command_pos = line.find('@')
-        phony_pos = line.find(".PHONY")
-        if separator_pos != -1:
-            curr_main_file = (line[0:separator_pos])  # файл, зависимости которого рассматриваются в цикле
-            curr_actions = []
-            if curr_main_file not in phony_func_names:
-                curr_dependencies = []
-                for dependency in line[separator_pos:-1].split(" "):  # не включать /n
-                    curr_dependencies.append(dependency)
-                curr_dependencies.pop(0)
-                dependencies[curr_main_file] = curr_dependencies
-        if command_pos != -1:
-            curr_actions.append(line[command_pos:])
-        if phony_pos != -1:
-            for phony_func_name in line[line.find("=") + 1:-1].strip().split():
-                phony_func_names.append(phony_func_name)
-            # print(phony_func_names)
-        else:
-            actions[curr_main_file] = curr_actions
-
-    # print(actions["clean"])
 
 
 # функция проверки на цикличность графа
@@ -100,27 +72,50 @@ def make_hash_table():
         hash_table[hash_func(file)] = file
 
 
+def parse_makefile():
+    makefile = open('Makefile', 'r')
+    for line in makefile:
+        separator_pos = line.find(':')
+        command_pos = line.find('@')
+        phony_pos = line.find(".PHONY")
+        if separator_pos != -1:
+            curr_main_file = (line[0:separator_pos])  # файл, зависимости которого рассматриваются в цикле
+            curr_actions = []
+            if curr_main_file not in phony_func_names:
+                curr_dependencies = []
+                for dependency in line[separator_pos:-1].split(" "):  # не включать /n
+                    curr_dependencies.append(dependency)
+                curr_dependencies.pop(0)
+                dependencies[curr_main_file] = curr_dependencies
+        if command_pos != -1:
+            curr_actions.append(line[command_pos:])
+        if phony_pos != -1:
+            for phony_func_name in line[line.find("=") + 1:-1].strip().split():
+                phony_func_names.append(phony_func_name)
+        else:
+            actions[curr_main_file] = curr_actions
+
+
 # функция обработки запросов
-def menu():
+def mainloop():
     parse_makefile()
     command = sys.argv
 
-    if command[1] == "make" and command[2] == "all":
+    if command[1] == "make":
         files_order = []
         make_hash_table()
-        for element in dependencies:
-            if element not in dependencies:
+        if len(command) > 2 and command[2] is not None:
+            if command[2] not in dependencies:
                 print("Key not found")
             else:
-                topological_sort(dependencies, element, files_order)
-        make_actions(files_order)
-    elif command[1] == "make" and command[2] is not None:
-        files_order = []
-        make_hash_table()
-        if command[2] not in dependencies:
-            print("Key not found")
+                topological_sort(dependencies, command[2], files_order)
+                make_actions(files_order)
         else:
-            topological_sort(dependencies, command[2], files_order)
+            for element in dependencies:
+                if element not in dependencies:
+                    print("Key not found")
+                else:
+                    topological_sort(dependencies, element, files_order)
             make_actions(files_order)
     elif command[1] in phony_func_names:
         make_actions([command[1]])
@@ -131,4 +126,4 @@ def menu():
 if __name__ == "__main__":
     if "files" not in os.listdir():
         os.mkdir("files")
-    menu()
+    mainloop()
