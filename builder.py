@@ -1,5 +1,7 @@
 import sys
 import os
+import hashlib
+import json
 
 dependencies = {}  # зависимости файлов
 actions = {}  # действия (с файлами и для ложных целей)
@@ -46,30 +48,37 @@ def make_actions(action_path):
         else:
             for action in actions[element]:
                 os.system(action)
+            if element not in phony_func_names:
+                hash_table[element] = get_hash_of_file(element)
 
 
-# хеш функция для создания ключей
-def hash_func(element):
-    hash_str = ""
-    for c in element:
-        hash_str += ''.join(str(ord(c)))  # посимвольный перевод строки в ASCII
-    return hash_str
+# контроль версий - совпадает ли хэш содержимого файла
+def in_hash_table(file):
+    return file in hash_table.keys() and get_hash_of_file(file) == hash_table[file]
 
 
-# реализуем  хеш-таблицу через словарь для контроля версий, ключи к которому будут генерироваться с помощью hash_func()
-def in_hash_table(element):
-    if hash_func(element) in hash_table.keys():
-        return True
-    else:
-        hash_table[hash_func(element)] = element
-        return False
+def get_hash_of_file(f_path, mode='md5'):
+    h = hashlib.new(mode)
+    with open(f_path, 'rb') as file:
+        data = file.read()
+    h.update(data)
+    digest = h.hexdigest()
+    return digest
+
+
+# def generate_json(*args):
+#     result = {}
+#     for arg in args:
+#         for file in glob.glob(arg):
+#             result[os.path.basename(file)] = get_hash_of_file(file)
+#     json.dumps(result, sort_keys=True, indent=2)
 
 
 # функция создания хеш таблицы для проверки
 def make_hash_table():
-    hash_table.clear()
+    # hash_table.clear()
     for file in os.listdir(os.getcwd() + '\\files'):
-        hash_table[hash_func(file)] = file
+        hash_table[file] = get_hash_of_file(os.getcwd() + '\\files\\' + file)
 
 
 def parse_makefile():
