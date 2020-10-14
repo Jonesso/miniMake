@@ -66,12 +66,10 @@ def get_hash_of_file(f_path, mode='md5'):
     return digest
 
 
-# def generate_json(*args):
-#     result = {}
-#     for arg in args:
-#         for file in glob.glob(arg):
-#             result[os.path.basename(file)] = get_hash_of_file(file)
-#     json.dumps(result, sort_keys=True, indent=2)
+# создание json-файла, в котором будут храниться хэши файлов
+def generate_json():
+    with open("data_file.json", "w") as write_file:
+        json.dump(hash_table, write_file)
 
 
 # функция создания хеш таблицы для проверки
@@ -126,6 +124,7 @@ def mainloop():
                 else:
                     topological_sort(dependencies, element, files_order)
             make_actions(files_order)
+        generate_json()
     elif command[1] in phony_func_names:
         make_actions([command[1]])
     else:
