@@ -7,6 +7,9 @@ dependencies = {}  # зависимости файлов
 actions = {}  # действия (с файлами и для ложных целей)
 hash_table = {}
 phony_func_names = []
+changed_files = []
+
+files_dir = os.getcwd() + "\\files"
 
 
 # функция проверки на цикличность графа
@@ -40,11 +43,10 @@ def topological_sort(graph, start, action_path):
 
 # функция реализации действий
 def make_actions(action_path):
-    path = os.getcwd() + "\\files"
-    os.chdir(path)
+    os.chdir(files_dir)
     for element in action_path:
         if in_hash_table(element):
-            print(element, "is up-to-date")
+            print(element, "is now up-to-date")
         else:
             for action in actions[element]:
                 os.system(action)
@@ -54,7 +56,7 @@ def make_actions(action_path):
 
 # контроль версий - совпадает ли хэш содержимого файла
 def in_hash_table(file):
-    return file in hash_table.keys() and get_hash_of_file(file) == hash_table[file]
+    return file in hash_table.keys() and get_hash_of_file(files_dir + "\\" + file) == hash_table[file]
 
 
 def get_hash_of_file(f_path, mode='md5'):
@@ -75,8 +77,10 @@ def generate_json():
 # функция создания хеш таблицы для проверки
 def make_hash_table():
     # hash_table.clear()
-    for file in os.listdir(os.getcwd() + '\\files'):
-        hash_table[file] = get_hash_of_file(os.getcwd() + '\\files\\' + file)
+    for file in os.listdir(files_dir):
+        if not in_hash_table(file):
+            hash_table[file] = get_hash_of_file(files_dir + '\\' + file)
+            changed_files.append(file)
 
 
 def parse_makefile():
@@ -124,6 +128,10 @@ def mainloop():
                 else:
                     topological_sort(dependencies, element, files_order)
             make_actions(files_order)
+        if len(changed_files) > 1:
+            changed_files.pop(changed_files.index("data_file.json"))
+            print("Files rebuilt:", changed_files)
+            changed_files.clear()
         generate_json()
     elif command[1] in phony_func_names:
         make_actions([command[1]])
@@ -134,4 +142,7 @@ def mainloop():
 if __name__ == "__main__":
     if "files" not in os.listdir():
         os.mkdir("files")
+    elif "data_file.json" in os.listdir(files_dir):
+        with open(files_dir + '\\data_file.json') as json_file:
+            hash_table = json.load(json_file)
     mainloop()
